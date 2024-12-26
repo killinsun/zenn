@@ -2,7 +2,7 @@
 # yarn lockfile v1
 
 
-"zenn-cli@^0.1.151":
-  "integrity" "sha512-Xp3hJ7Lo+Li7MbRMPheQCbiWu5nWnExXfyH0cgG8Mwk37tze2Kb1C4UOq/dvg3kukIfI0wxlIGTjoLKL7x8c5g=="
-  "resolved" "https://registry.npmjs.org/zenn-cli/-/zenn-cli-0.1.151.tgz"
-  "version" "0.1.151"
+zenn-cli@^0.1.151:
+  version "0.1.151"
+  resolved "https://registry.npmjs.org/zenn-cli/-/zenn-cli-0.1.151.tgz"
+  integrity sha512-Xp3hJ7Lo+Li7MbRMPheQCbiWu5nWnExXfyH0cgG8Mwk37tze2Kb1C4UOq/dvg3kukIfI0wxlIGTjoLKL7x8c5g==
