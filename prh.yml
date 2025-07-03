@@ -1,0 +1,90 @@
+version: 1
+
+rules:
+  # 技術用語の統一
+  - expected: JavaScript
+    patterns:
+      - Javascript
+      - javascript
+      - java script
+      - Java Script
+
+  - expected: Node.js
+    patterns:
+      - NodeJS
+      - nodejs
+      - node.js
+
+  - expected: npm
+    patterns:
+      - NPM
+
+  - expected: GitHub
+    patterns:
+      - Github
+      - github
+
+  - expected: macOS
+    patterns:
+      - Mac OS
+      - MacOS
+      - Mac
+
+  - expected: iOS
+    patterns:
+      - IOS
+
+  - expected: TypeScript
+    patterns:
+      - Typescript
+      - typescript
+      - type script
+
+  - expected: リポジトリ
+    patterns:
+      - レポジトリ
+
+  - expected: エディタ
+    patterns:
+      - エディター
+
+  - expected: ユーザー
+    patterns:
+      - ユーザ
+
+  - expected: サーバー
+    patterns:
+      - サーバ
+
+  - expected: ブラウザー
+    patterns:
+      - ブラウザ
+
+  - expected: コンピューター
+    patterns:
+      - コンピュータ
+
+  # より良い表現
+  - expected: 例えば
+    patterns:
+      - たとえば
+
+  - expected: さまざま
+    patterns:
+      - 様々
+
+  - expected: すべて
+    patterns:
+      - 全て
+
+  - expected: できる
+    patterns:
+      - 出来る
+
+  - expected: すでに
+    patterns:
+      - 既に
+
+  - expected: もっとも
+    patterns:
+      - 最も 
