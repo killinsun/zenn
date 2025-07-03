@@ -1,0 +1,42 @@
+{
+  "rules": {
+    "preset-ja-technical-writing": {
+      "sentence-length": {
+        "max": 100
+      },
+      "max-comma": {
+        "max": 3
+      },
+      "max-ten": {
+        "max": 3
+      },
+      "max-kanji-continuous-len": {
+        "max": 6
+      },
+      "arabic-kanji-numbers": true,
+      "no-hankaku-kana": true,
+      "ja-no-weak-phrase": true,
+      "ja-no-redundant-expression": true,
+      "ja-no-abusage": true,
+      "ja-no-successive-word": true,
+      "ja-unnatural-alphabet": true,
+      "no-mix-dearu-desumasu": {
+        "preferInHeader": "",
+        "preferInBody": "ですます",
+        "preferInList": "である",
+        "strict": false
+      },
+      "no-doubled-joshi": {
+        "min_interval": 1,
+        "strict": false,
+        "allow": []
+      }
+    },
+    "no-mixed-zenkaku-and-hankaku-alphabet": true,
+    "prh": {
+      "rulePaths": [
+        "./prh.yml"
+      ]
+    }
+  }
+} 
