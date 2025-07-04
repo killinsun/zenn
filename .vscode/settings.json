@@ -1,9 +1,7 @@
 {
-	"textlint.enable": true,
-	"textlint.autoFixOnSave": true,
+	"textlint.autoFixOnSave": false,
 	"textlint.run": "onType",
 	"textlint.targetPath": "articles/**/*.md",
 	"textlint.configPath": "./.textlintrc",
 	"textlint.nodePath": "./node_modules",
-	"textlint.trace.server": "verbose"
 }
