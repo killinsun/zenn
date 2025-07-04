@@ -1,7 +1,11 @@
 {
+	"npm.packageManager": "pnpm",
 	"textlint.autoFixOnSave": false,
 	"textlint.run": "onType",
 	"textlint.targetPath": "articles/**/*.md",
 	"textlint.configPath": "./.textlintrc",
 	"textlint.nodePath": "./node_modules",
+	"textlint.languages": [
+		"md"
+	],
 }
