@@ -9,7 +9,12 @@
     "textlint-rule-prh": "^6.1.0"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks && chmod +x .githooks/* scripts/*.mjs",
     "textlint": "textlint articles/*.md",
-    "textlint:fix": "textlint --fix articles/*.md"
+    "textlint:fix": "textlint --fix articles/*.md",
+    "validate": "node scripts/validate-articles.mjs",
+    "validate:all": "node scripts/validate-articles.mjs --all",
+    "natural": "uv run .agents/skills/natural-japanese/scripts/lint.py",
+    "gate": "bash .githooks/pre-push"
   }
 }

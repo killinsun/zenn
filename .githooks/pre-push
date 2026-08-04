@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+#
+# Zenn 記事の push ゲート。
+#
+# このリポジトリは PUBLIC で、main への push が Zenn への同期を意味する。
+# published: false の下書きも GitHub 上では誰でも読めるため、
+# 「公開前」ではなく「push 前」に止める必要がある。
+#
+# 有効化:
+#   git config core.hooksPath .githooks
+#
+# 検査ロジックの実体は scripts/validate-articles.mjs（pre-push と /publish-check の共通の正）。
+#
+# 緊急時の回避:
+#   git push --no-verify
+#   ただし秘匿値の混入だけは回避しないこと。push した時点で公開される。
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT" || exit 1
+
+BOLD=$'\033[1m'; RED=$'\033[31m'; YELLOW=$'\033[33m'; GREEN=$'\033[32m'; DIM=$'\033[2m'; OFF=$'\033[0m'
+if [ ! -t 1 ]; then BOLD=''; RED=''; YELLOW=''; GREEN=''; DIM=''; OFF=''; fi
+
+ZERO="0000000000000000000000000000000000000000"
+
+# ---------------------------------------------------------------- 検査範囲の決定
+#
+# pre-push は stdin から "<local ref> <local sha> <remote ref> <remote sha>" を受け取る。
+# 新規ブランチ（remote sha が全ゼロ）の場合は origin/main を基点にする。
+
+RANGES=()
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
+  [ "$local_sha" = "$ZERO" ] && continue          # ブランチ削除
+
+  if [ "$remote_sha" = "$ZERO" ]; then
+    if git rev-parse --verify --quiet origin/main >/dev/null; then
+      RANGES+=("origin/main...$local_sha")
+    else
+      RANGES+=("--all")
+    fi
+  else
+    RANGES+=("$remote_sha...$local_sha")
+  fi
+done
+
+# stdin が空（手動実行など）のときは未 push 分を見る
+if [ ${#RANGES[@]} -eq 0 ]; then
+  if git rev-parse --verify --quiet origin/main >/dev/null; then
+    RANGES+=("origin/main...HEAD")
+  else
+    RANGES+=("--all")
+  fi
+fi
+
+# ---------------------------------------------------------------- 対象記事の収集
+
+FILES=()
+for range in "${RANGES[@]}"; do
+  if [ "$range" = "--all" ]; then
+    while IFS= read -r f; do FILES+=("$f"); done < <(git ls-files 'articles/*.md')
+  else
+    while IFS= read -r f; do
+      [ -f "$f" ] && FILES+=("$f")
+    done < <(git diff --name-only --diff-filter=ACMR "$range" -- 'articles/*.md' 2>/dev/null)
+  fi
+done
+
+# 重複除去
+if [ ${#FILES[@]} -gt 0 ]; then
+  UNIQ=()
+  while IFS= read -r f; do UNIQ+=("$f"); done < <(printf '%s\n' "${FILES[@]}" | sort -u)
+  FILES=("${UNIQ[@]}")
+fi
+
+if [ ${#FILES[@]} -eq 0 ]; then
+  echo "${DIM}▶ zenn pre-push gate: 変更された記事はありません${OFF}"
+  exit 0
+fi
+
+echo ""
+echo "${BOLD}▶ zenn pre-push gate${OFF} ${DIM}(${#FILES[@]}件)${OFF}"
+echo ""
+
+FAILED=0
+
+# ---------------------------------------------------------------- 1. 機械検査
+
+if ! node scripts/validate-articles.mjs "${FILES[@]}"; then
+  FAILED=1
+fi
+
+# ---------------------------------------------------------------- 2. textlint
+#
+# published: true の記事だけ push を止める。
+# 下書きは執筆途中で textlint が通らないのが普通なので、表示のみに留める
+# （ここを厳しくすると WIP を push できなくなり、--no-verify が常態化する）。
+
+echo ""
+echo "${BOLD}▶ textlint${OFF}"
+if [ -x node_modules/.bin/textlint ]; then
+  PUBLISHED=()
+  while IFS= read -r f; do
+    [ -n "$f" ] && PUBLISHED+=("$f")
+  done < <(node scripts/validate-articles.mjs --list-published "${FILES[@]}")
+
+  DRAFTS=()
+  for f in "${FILES[@]}"; do
+    is_pub=0
+    if [ ${#PUBLISHED[@]} -gt 0 ]; then
+      for p in "${PUBLISHED[@]}"; do [ "$f" = "$p" ] && is_pub=1 && break; done
+    fi
+    [ "$is_pub" -eq 0 ] && DRAFTS+=("$f")
+  done
+
+  if [ ${#PUBLISHED[@]} -gt 0 ]; then
+    echo "  ${DIM}published (${#PUBLISHED[@]}件) — 違反があれば push を止めます${OFF}"
+    if node_modules/.bin/textlint "${PUBLISHED[@]}"; then
+      echo "  ${GREEN}✓ 問題なし${OFF}"
+    else
+      echo "  ${DIM}自動修正: pnpm exec textlint --fix ${PUBLISHED[*]}${OFF}"
+      FAILED=1
+    fi
+  fi
+
+  if [ ${#DRAFTS[@]} -gt 0 ]; then
+    echo "  ${DIM}draft (${#DRAFTS[@]}件) — 表示のみ${OFF}"
+    if node_modules/.bin/textlint "${DRAFTS[@]}" >/dev/null 2>&1; then
+      echo "  ${GREEN}✓ 問題なし${OFF}"
+    else
+      n=$(node_modules/.bin/textlint -f json "${DRAFTS[@]}" 2>/dev/null \
+          | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.messages.length,0))}catch{console.log("?")}})')
+      echo "  ${YELLOW}! ${n}件${OFF} ${DIM}（公開前に /writing-check で対応してください）${OFF}"
+    fi
+  fi
+else
+  echo "  ${YELLOW}! textlint が未インストールのためスキップ（pnpm install）${OFF}"
+fi
+
+# ---------------------------------------------------------------- 結果
+
+echo ""
+if [ "$FAILED" -ne 0 ]; then
+  echo "${RED}✗ push を中断しました。${OFF}"
+  echo ""
+  echo "  ${DIM}修正してから push し直してください。${OFF}"
+  echo "  ${DIM}どうしても通す必要がある場合: git push --no-verify${OFF}"
+  echo "  ${DIM}（ただし秘匿値の指摘だけは回避しないこと。push した時点で公開されます）${OFF}"
+  echo ""
+  exit 1
+fi
+
+echo "${GREEN}✓ ゲート通過${OFF}"
+echo ""
+exit 0
